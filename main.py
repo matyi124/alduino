@@ -1,40 +1,47 @@
+import os
+import sys
+import time
 import serial
 import pyautogui
-import time
-import os
-import time
 import win32com.client
 import win32console
 import win32gui
 
+# konzol háttérbe
 konzol_hwnd = win32console.GetConsoleWindow()
-win32gui.ShowWindow(konzol_hwnd, 6)  # vagy 0 ha teljesen elrejtenéd
+win32gui.ShowWindow(konzol_hwnd, 6)
 
-# aktuális mappa
-mappa = os.path.dirname(os.path.abspath(__file__))
+# megtaláljuk a mappát akkor is, ha .exe-ből fut
+if getattr(sys, 'frozen', False):
+    # ha PyInstaller .exe
+    mappa = sys._MEIPASS
+else:
+    # ha sima Python
+    mappa = os.path.dirname(os.path.abspath(__file__))
+
 pptx_utvonal = os.path.join(mappa, "prezi.pptx")
 
-# PowerPoint elindítása
+# PowerPoint indítása
 powerpoint = win32com.client.Dispatch("PowerPoint.Application")
 powerpoint.Visible = True
 
 # fájl megnyitása
+print(f"Próbáljuk megnyitni: {pptx_utvonal}")
 prezi = powerpoint.Presentations.Open(pptx_utvonal)
 
 # diavetítés indítása
 show = prezi.SlideShowSettings
 show.Run()
 
-print("PowerPoint bemutató elindult.")
+# előtérbe hozzuk a PowerPoint-ot
+shell = win32com.client.Dispatch("WScript.Shell")
+shell.AppActivate("PowerPoint")
 
-# várhatsz pár másodpercet, vagy itt folytathatod a többi kódod
+print("PowerPoint bemutató elindult.")
 time.sleep(5)
 
-
+# Arduino port megnyitása
 arduino = serial.Serial('COM5', 9600)
-
-print("Várunk 10 másodpercet, hogy indíthasd a PowerPoint-ot…")
-print("Figyelem a jeleket…")
 
 prev_action = None
 
@@ -47,20 +54,22 @@ while True:
             parts = sor.split()
             d2 = int(parts[0].split(":")[1])
             d3 = int(parts[1].split(":")[1])
+            d3 = int(parts[2].split(":")[1])
 
             action = None
 
-            if d2 == 1 and d3 == 1:
+            if d2 == 1 and d3 == 1 and d3 == 1:
                 action = 1
-            elif d2 == 0 and d3 == 1:
+            elif d2 == 0 and d3 == 1 and d3 == 1:
                 action = 2
-            elif d2 == 1 and d3 == 0:
+            elif d2 == 1 and d3 == 0 and d3 == 1:
                 action = 3
-            elif d2 == 0 and d3 == 0:
-                action = None  # nem csinál semmit
+            elif d2 == 1 and d3 == 1 and d3 == 0:
+                action = 4
+            elif d2 == 0 and d3 == 0 and d3 == 0:
+                action = None
 
             if action is not None and action != prev_action:
-                print(f"Ugrunk a {action}. diára")
                 pyautogui.typewrite(str(action))
                 pyautogui.press('enter')
                 prev_action = action
